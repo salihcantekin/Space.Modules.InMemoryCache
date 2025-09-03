@@ -60,11 +60,20 @@ jobs:
       - name: Test (Build & Run with binlog)
         run: dotnet test tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --logger trx /bl:tests.binlog
 
+      - name: Ensure README present
+        run: |
+          FILE=$(dirname "$PROJECT")/README.md
+          if [ ! -f "$FILE" ]; then
+            echo "README.md not found at $FILE" >&2
+            exit 1
+          fi
+          echo "Found README: $FILE"
+
       - name: Pack
         run: |
           mkdir -p artifacts
           echo "Packing $PROJECT -> ${VERSION}";
-          dotnet pack "$PROJECT" -c Release --no-build -p:PackageVersion=${VERSION} -p:ContinuousIntegrationBuild=true -o artifacts
+          dotnet pack "$PROJECT" -c Release -p:PackageVersion=${VERSION} -p:PackageReadmeFile=README.md -p:ContinuousIntegrationBuild=true -o artifacts
 
       - name: Publish Preview Packages (NuGet)
         if: success()

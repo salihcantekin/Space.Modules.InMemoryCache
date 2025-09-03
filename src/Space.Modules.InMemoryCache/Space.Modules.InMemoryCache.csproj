@@ -30,6 +30,8 @@
 
 	<ItemGroup>
 		<None Include="icon.png" Pack="true" PackagePath="" />
+		<!-- Link the root README.md so NuGet pack includes it without duplicating file -->
+		<None Include="../README.md" Pack="true" PackagePath="" Link="README.md" />
 	</ItemGroup>
 
 	<ItemGroup>
