@@ -1,0 +1,69 @@
+name: Validation Build
+
+on:
+  push:
+    branches:
+      - 'feature/*'
+      - 'features/*'
+  pull_request:
+    branches:
+      - dev
+      - master
+
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      PROJECT: src/Space.Modules.InMemoryCache/Space.Modules.InMemoryCache.csproj
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.x
+          cache: true
+
+      - name: Code Style Check
+        run: dotnet format --verify-no-changes || (echo 'Run dotnet format locally to fix style issues.' && exit 1)
+
+      - name: Build (Release)
+        run: dotnet build "$PROJECT" -c Release -p:ContinuousIntegrationBuild=true
+
+      - name: Test (Release with coverage)
+        run: >
+          dotnet test tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj
+          -c Release --no-build --logger trx
+          --collect:"XPlat Code Coverage"
+
+      - name: Dependency Vulnerability Scan
+        run: dotnet list "$PROJECT" package --vulnerable --include-transitive || true
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-test-results
+          path: tests/**/TestResults/*.trx
+          retention-days: 5
+
+      - name: Upload Coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-coverage
+          path: '**/coverage.cobertura.xml'
+          retention-days: 5

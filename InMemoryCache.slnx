@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/github/">
+    <File Path=".github/workflows/dev-ci.yml" />
+    <File Path=".github/workflows/prod-ci.yml" />
+    <File Path=".github/workflows/validation-build.yml" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Space.Modules.InMemoryCache/Space.Modules.InMemoryCache.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj" />
+  </Folder>
+</Solution>
