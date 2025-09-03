@@ -31,6 +31,9 @@ jobs:
         with:
           dotnet-version: 8.x
           cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/global.json
 
       - name: Resolve Preview Version
         id: version
