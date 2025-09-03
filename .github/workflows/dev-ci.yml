@@ -19,6 +19,7 @@ jobs:
     env:
       DOTNET_NOLOGO: true
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
       PROJECT: src/Space.Modules.InMemoryCache/Space.Modules.InMemoryCache.csproj
     steps:
       - name: Checkout
@@ -29,11 +30,16 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.x
+          dotnet-version: |
+            8.x
+            9.x
           cache: true
           cache-dependency-path: |
             **/*.csproj
             **/global.json
+
+      - name: Restore
+        run: dotnet restore
 
       - name: Resolve Preview Version
         id: version
@@ -48,11 +54,11 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Resolved preview version: $VERSION (base $LAST_STABLE_TAG)" | tee -a $GITHUB_STEP_SUMMARY
 
-      - name: Build (Release Library)
-        run: dotnet build "$PROJECT" -c Release -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true
+      - name: Build (Release Solution)
+        run: dotnet build -c Release -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
 
-      - name: Test (build + run)
-        run: dotnet test tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --logger trx
+      - name: Test (Build & Run with binlog)
+        run: dotnet test tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --logger trx /bl:tests.binlog
 
       - name: Pack
         run: |
@@ -67,7 +73,7 @@ jobs:
       - name: Publish Outputs
         run: |
           mkdir -p drop
-          dotnet publish "$PROJECT" -c Release -o "drop/Space.Modules.InMemoryCache" -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true
+          dotnet publish "$PROJECT" -c Release -o "drop/Space.Modules.InMemoryCache" -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
           cp artifacts/*.nupkg drop/
 
       - name: Upload Drop Artifact
@@ -83,4 +89,12 @@ jobs:
         with:
           name: dev-test-results
           path: tests/**/TestResults/*.trx
+          retention-days: 7
+
+      - name: Upload Test Binlog
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dev-test-binlog
+          path: tests.binlog
           retention-days: 7
