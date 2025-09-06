@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
@@ -5,7 +6,15 @@ namespace Space.Modules.InMemoryCache.Cache;
 
 public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
 {
-    private readonly ConcurrentDictionary<string, object> handlers = [];
+    // introduce cache entry model to manage expiration
+    private sealed class CacheEntry
+    {
+        public object Value { get; init; }
+        public DateTimeOffset ExpiresAt { get; init; }
+    }
+
+    // change dictionary to CacheEntry
+    private readonly ConcurrentDictionary<string, CacheEntry> handlers = [];
 
     public string GetKey<TRequest>(TRequest request)
     {
@@ -14,7 +23,11 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
 
     public ValueTask Store<TResponse>(string key, TResponse response, CacheModuleConfig config)
     {
-        handlers[key] = response;
+        var duration = config?.TimeSpan ?? TimeSpan.Zero;
+        var expiresAt = duration <= TimeSpan.Zero ? DateTimeOffset.MaxValue : DateTimeOffset.UtcNow.Add(duration);
+        
+        handlers[key] = new CacheEntry { Value = response!, ExpiresAt = expiresAt };
+
         return default;
     }
 
@@ -22,10 +35,18 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
     {
         response = default;
 
-        if (!handlers.TryGetValue(key, out var objResponse))
+        if (!handlers.TryGetValue(key, out var entry))
             return false;
 
-        response = (TResponse)objResponse;
+        if (entry.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            // invalidate expired
+            handlers.TryRemove(key, out _);
+            return false;
+        }
+
+        response = (TResponse)entry.Value;
+
         return true;
 
     }
