@@ -40,14 +40,29 @@ jobs:
             **/*.csproj
             **/global.json
 
+      - name: Restore
+        run: |
+          dotnet restore "$PROJECT"
+          dotnet restore tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj
+
       - name: Code Style Check
-        run: dotnet format --verify-no-changes || (echo 'Run dotnet format locally to fix style issues.' && exit 1)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t projects < <(git ls-files "*.csproj")
+          if [ ${#projects[@]} -eq 0 ]; then
+            echo "No projects found to format. Skipping."; exit 0
+          fi
+          for p in "${projects[@]}"; do
+            echo "Running dotnet format on: $p"
+            dotnet format "$p" --verify-no-changes
+          done
 
-      - name: Restore (all projects)
-        run: dotnet restore
+      - name: Build (Release - Library)
+        run: dotnet build "$PROJECT" -c Release --no-restore -p:ContinuousIntegrationBuild=true
 
-      - name: Build Solution (Release)
-        run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true
+      - name: Build (Release - Tests)
+        run: dotnet build tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --no-restore
 
       - name: Test (Release with coverage)
         run: >
