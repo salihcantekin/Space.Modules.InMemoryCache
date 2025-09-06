@@ -39,7 +39,7 @@ jobs:
             **/global.json
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore "$PROJECT"
 
       - name: Resolve Preview Version
         id: version
@@ -54,17 +54,14 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Resolved preview version: $VERSION (base $LAST_STABLE_TAG)" | tee -a $GITHUB_STEP_SUMMARY
 
-      - name: Build (Release Solution)
-        run: dotnet build -c Release -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
-
-      - name: Test
-        run: dotnet test tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --logger trx
+      - name: Build (Release)
+        run: dotnet build "$PROJECT" -c Release -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
 
       - name: Pack
         run: |
           mkdir -p artifacts
           echo "Packing $PROJECT -> ${VERSION}";
-          dotnet pack "$PROJECT" -c Release -p:PackageVersion=${VERSION} -p:ContinuousIntegrationBuild=true -o artifacts
+          dotnet pack "$PROJECT" -c Release -p:PackageVersion=${VERSION} -p:ContinuousIntegrationBuild=true -o artifacts --no-build
 
       - name: Publish Preview Packages (NuGet)
         if: success()
@@ -81,12 +78,4 @@ jobs:
         with:
           name: dev-drop
           path: drop
-          retention-days: 7
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: dev-test-results
-          path: tests/**/TestResults/*.trx
           retention-days: 7

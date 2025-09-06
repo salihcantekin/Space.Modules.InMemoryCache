@@ -36,12 +36,18 @@ jobs:
         with:
           dotnet-version: 8.x
           cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/global.json
 
       - name: Code Style Check
         run: dotnet format --verify-no-changes || (echo 'Run dotnet format locally to fix style issues.' && exit 1)
 
-      - name: Build (Release)
-        run: dotnet build "$PROJECT" -c Release -p:ContinuousIntegrationBuild=true
+      - name: Restore (all projects)
+        run: dotnet restore
+
+      - name: Build Solution (Release)
+        run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true
 
       - name: Test (Release with coverage)
         run: >

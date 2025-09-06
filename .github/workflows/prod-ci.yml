@@ -30,11 +30,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.x
+          cache: true
+          cache-dependency-path: |
+            **/*.csproj
+            **/global.json
 
       - name: Restore
         run: |
           dotnet restore "$PROJECT"
-          dotnet restore tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj
 
       - name: Ensure Tag @ HEAD
         id: tag
@@ -59,15 +62,6 @@ jobs:
       - name: Build (Release)
         run: dotnet build "$PROJECT" -c Release --no-restore -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true
 
-      - name: Build Tests (Release)
-        run: dotnet build tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --no-restore
-
-      - name: Test (with coverage)
-        run: >
-          dotnet test tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj
-          -c Release --no-build --logger trx
-          --collect:"XPlat Code Coverage"
-
       - name: Dependency Vulnerability Scan
         run: dotnet list "$PROJECT" package --vulnerable --include-transitive || true
 
@@ -84,7 +78,7 @@ jobs:
       - name: Publish Outputs
         run: |
           mkdir -p drop
-          dotnet publish "$PROJECT" -c Release -o "drop/Space.Modules.InMemoryCache" -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true
+          dotnet publish "$PROJECT" -c Release -o "drop/Space.Modules.InMemoryCache" -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
           cp artifacts/*.nupkg drop/
 
       - name: Upload Drop Artifact
@@ -93,19 +87,3 @@ jobs:
             name: prod-drop
             path: drop
             retention-days: 14
-
-      - name: Upload Test Results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prod-test-results
-          path: tests/**/TestResults/*.trx
-          retention-days: 14
-
-      - name: Upload Coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: prod-coverage
-          path: '**/coverage.cobertura.xml'
-          retention-days: 14
