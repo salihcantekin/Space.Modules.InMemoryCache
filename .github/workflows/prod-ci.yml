@@ -31,6 +31,11 @@ jobs:
         with:
           dotnet-version: 8.x
 
+      - name: Restore
+        run: |
+          dotnet restore "$PROJECT"
+          dotnet restore tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj
+
       - name: Ensure Tag @ HEAD
         id: tag
         shell: bash
@@ -53,6 +58,9 @@ jobs:
 
       - name: Build (Release)
         run: dotnet build "$PROJECT" -c Release --no-restore -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true
+
+      - name: Build Tests (Release)
+        run: dotnet build tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --no-restore
 
       - name: Test (with coverage)
         run: >
