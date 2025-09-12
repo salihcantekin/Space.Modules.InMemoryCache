@@ -14,9 +14,10 @@ public static class CacheModuleDependencyInjectionExtensions
     {
         CacheModuleOptions opt = new();
         optionAction?.Invoke(opt);
-
+        
         services.AddSingleton<IReadOnlyDictionary<string, CacheModuleOptions>>(opt.Profiles);
         services.AddSingleton<IModuleGlobalOptionsAccessor<CacheModuleOptions>>(sp => new ModuleGlobalOptionsAccessor<CacheModuleOptions>(opt.Profiles));
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
         services.AddSingleton<ICacheModuleProvider, InMemoryCacheModuleProvider>();
 
         return services;

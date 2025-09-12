@@ -11,6 +11,14 @@ namespace InMemoryCache.Tests;
 
 public class CacheProfileOptionsTests
 {
+    private sealed class FakeClock : TimeProvider
+    {
+        private DateTimeOffset now;
+        public FakeClock(DateTimeOffset start) => now = start;
+        public override DateTimeOffset GetUtcNow() => now;
+        public void Advance(TimeSpan by) => now = now.Add(by);
+    }
+
     public record Req(string Key) : IRequest<Res>;
     public record Res(string Value);
 
@@ -34,22 +42,26 @@ public class CacheProfileOptionsTests
             => HandleFunc != null ? HandleFunc(ctx) : ValueTask.FromResult(new Res($"{ctx.Request.Key}:{Guid.NewGuid()}"));
     }
 
-    private static ServiceProvider BuildProvider(Action<CacheModuleOptions> cacheOpt)
+    private static (ServiceProvider sp, FakeClock clock) BuildProvider(Action<CacheModuleOptions> cacheOpt)
     {
         var services = new ServiceCollection();
         services.AddSpace(opt => opt.ServiceLifetime = ServiceLifetime.Singleton);
         services.AddSpaceInMemoryCache(cacheOpt);
-        return services.BuildServiceProvider();
+        var clock = new FakeClock(DateTimeOffset.UnixEpoch);
+        // Ensure our fake clock overrides the default registration
+        services.AddSingleton<TimeProvider>(clock);
+        return (services.BuildServiceProvider(), clock);
     }
 
     [Fact]
     public async Task DefaultProfile_Applies_When_Attribute_Has_No_Properties()
     {
-        using var sp = BuildProvider(opt =>
+        var (sp, clock) = BuildProvider(opt =>
         {
             opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromMilliseconds(50));
         });
 
+        using var _ = sp;
         var h = sp.GetRequiredService<Handler>();
         var space = sp.GetRequiredService<ISpace>();
 
@@ -67,7 +79,7 @@ public class CacheProfileOptionsTests
         Assert.Equal(1, cnt); // second call should be cached (within TTL)
         Assert.Equal(r1.Value, r2.Value);
 
-        await Task.Delay(100);
+        clock.Advance(TimeSpan.FromMilliseconds(100));
         var r3 = await space.Send<Req, Res>(req, name: nameof(Handler.DefaultProfile));
         Assert.Equal(2, cnt); // expired due to default profile
         Assert.NotEqual(r2.Value, r3.Value);
@@ -76,12 +88,13 @@ public class CacheProfileOptionsTests
     [Fact]
     public async Task Named_Profile_Applies_When_Specified_On_Attribute()
     {
-        using var sp = BuildProvider(opt =>
+        var (sp, clock) = BuildProvider(opt =>
         {
             opt.WithProfile("fast", p => p.TimeSpan = TimeSpan.FromMilliseconds(50));
             opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromSeconds(60));
         });
 
+        using var _ = sp;
         var h = sp.GetRequiredService<Handler>();
         var space = sp.GetRequiredService<ISpace>();
 
@@ -99,7 +112,7 @@ public class CacheProfileOptionsTests
         Assert.Equal(1, cnt); // within fast profile TTL
         Assert.Equal(r1.Value, r2.Value);
 
-        await Task.Delay(100);
+        clock.Advance(TimeSpan.FromMilliseconds(100));
         var r3 = await space.Send<Req, Res>(req, name: nameof(Handler.NamedProfile));
         Assert.Equal(2, cnt); // expired due to fast profile
         Assert.NotEqual(r2.Value, r3.Value);
@@ -108,13 +121,14 @@ public class CacheProfileOptionsTests
     [Fact]
     public async Task Attribute_Properties_Override_Profile_Values()
     {
-        using var sp = BuildProvider(opt =>
+        var (sp, clock) = BuildProvider(opt =>
         {
             // Profile defines very short ttl, but attribute sets Duration=1s which should override profile value
             opt.WithProfile("slow", p => p.TimeSpan = TimeSpan.FromMilliseconds(50));
             opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromMilliseconds(50));
         });
 
+        using var _ = sp;
         var h = sp.GetRequiredService<Handler>();
         var space = sp.GetRequiredService<ISpace>();
 
@@ -128,13 +142,13 @@ public class CacheProfileOptionsTests
         var req = new Req("c");
 
         var r1 = await space.Send<Req, Res>(req, name: nameof(Handler.AttributeOverrides));
-        await Task.Delay(200); // less than attribute Duration (1s)
+        clock.Advance(TimeSpan.FromMilliseconds(200)); // less than attribute Duration (1s)
         var r2 = await space.Send<Req, Res>(req, name: nameof(Handler.AttributeOverrides));
 
         Assert.Equal(1, cnt); // should not expire because attribute overrides profile (1s)
         Assert.Equal(r1.Value, r2.Value);
 
-        await Task.Delay(1000);
+        clock.Advance(TimeSpan.FromMilliseconds(1000));
         var r3 = await space.Send<Req, Res>(req, name: nameof(Handler.AttributeOverrides));
         Assert.Equal(2, cnt);
         Assert.NotEqual(r2.Value, r3.Value);
