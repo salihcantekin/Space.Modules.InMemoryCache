@@ -1,12 +1,11 @@
-name: Prod CI (Stable Publish)
+name: Release Publish
 
 on:
-  push:
-    branches:
-      - master
+  release:
+    types: [published]
 
 concurrency:
-  group: prod-ci
+  group: release-publish
   cancel-in-progress: true
 
 permissions:
@@ -14,7 +13,7 @@ permissions:
   packages: write
 
 jobs:
-  prod-ci:
+  publish:
     runs-on: ubuntu-latest
     env:
       DOTNET_NOLOGO: true
@@ -25,6 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.release.tag_name }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -35,35 +35,31 @@ jobs:
             **/*.csproj
             **/global.json
 
-      - name: Restore
-        run: |
-          dotnet restore "$PROJECT"
-
-      - name: Ensure Tag @ HEAD
-        id: tag
+      - name: Resolve Version From Release
+        id: version
         shell: bash
         run: |
           set -euo pipefail
-          if git describe --tags --exact-match >/dev/null 2>&1; then
-            TAG=$(git describe --tags --exact-match)
-            if [[ ! $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              echo "Tag $TAG is not a stable semantic version tag (vX.Y.Z)." >&2
-              exit 1
-            fi
-            echo "Found stable tag: $TAG"
-            VERSION=${TAG#v}
-            echo "VERSION=$VERSION" >> $GITHUB_ENV
-            echo "### Stable Version: $VERSION" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "No exact tag at HEAD. Create a stable vX.Y.Z tag before pushing to master." >&2
+          TAG="${{ github.event.release.tag_name }}"
+          echo "Release tag: $TAG"
+          if [[ ! $TAG =~ ^[vV][0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must be vX.Y.Z" >&2
             exit 1
           fi
+          BASE=${TAG#v}; BASE=${BASE#V}
+          VERSION="$BASE"
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            VERSION+="-preview"
+          fi
+          echo "Resolved version: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "### Version: $VERSION" >> $GITHUB_STEP_SUMMARY
+
+      - name: Restore
+        run: dotnet restore "$PROJECT"
 
       - name: Build (Release)
         run: dotnet build "$PROJECT" -c Release --no-restore -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true
-
-      - name: Dependency Vulnerability Scan
-        run: dotnet list "$PROJECT" package --vulnerable --include-transitive || true
 
       - name: Pack
         run: |
@@ -71,19 +67,13 @@ jobs:
           echo "Packing $PROJECT -> ${VERSION}";
           dotnet pack "$PROJECT" -c Release --no-build -p:PackageVersion=${VERSION} -p:ContinuousIntegrationBuild=true -o artifacts
 
-      - name: Publish Stable Packages (NuGet)
+      - name: Publish Packages (NuGet)
         if: success()
         run: dotnet nuget push "./artifacts/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
 
-      - name: Publish Outputs
-        run: |
-          mkdir -p drop
-          dotnet publish "$PROJECT" -c Release -o "drop/Space.Modules.InMemoryCache" -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
-          cp artifacts/*.nupkg drop/
-
-      - name: Upload Drop Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-            name: prod-drop
-            path: drop
-            retention-days: 14
+          name: release-artifacts
+          path: artifacts/*.nupkg
+          retention-days: 14
