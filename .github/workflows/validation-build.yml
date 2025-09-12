@@ -34,11 +34,9 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.x
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/global.json
+          dotnet-version: |
+            8.x
+            9.x
 
       - name: Restore (all projects)
         run: dotnet restore
