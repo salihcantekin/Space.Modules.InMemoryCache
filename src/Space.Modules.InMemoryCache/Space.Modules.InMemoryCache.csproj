@@ -32,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Space.Abstraction" Version="1.1.7-preview.2" />
+		<PackageReference Include="Space.Abstraction" Version="1.1.11" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
 	</ItemGroup>
 
