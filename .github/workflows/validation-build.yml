@@ -34,16 +34,12 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.x
-          cache: true
-          cache-dependency-path: |
-            **/*.csproj
-            **/global.json
+          dotnet-version: |
+            8.x
+            9.x
 
-      - name: Restore
-        run: |
-          dotnet restore "$PROJECT"
-          dotnet restore tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj
+      - name: Restore (all projects)
+        run: dotnet restore
 
       - name: Code Style Check
         shell: bash
@@ -58,11 +54,8 @@ jobs:
             dotnet format "$p" --verify-no-changes
           done
 
-      - name: Build (Release - Library)
-        run: dotnet build "$PROJECT" -c Release --no-restore -p:ContinuousIntegrationBuild=true
-
-      - name: Build (Release - Tests)
-        run: dotnet build tests/InMemoryCache.Tests/InMemoryCache.Tests.csproj -c Release --no-restore
+      - name: Build Solution (Release)
+        run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true
 
       - name: Test (Release with coverage)
         run: >
