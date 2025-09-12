@@ -88,7 +88,7 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
 
     public override IModuleProvider GetDefaultProvider() => new InMemoryCacheModuleProvider();
 
-    
+
     public override IModuleProvider GetModuleProvider()
     {
         if (moduleProvider is not null)
