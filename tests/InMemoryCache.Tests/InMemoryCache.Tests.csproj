@@ -11,7 +11,7 @@
 
 	<ItemGroup>
 
-		<PackageReference Include="Space.DependencyInjection" Version="1.1.8" />
+		<PackageReference Include="Space.DependencyInjection" Version="1.1.11" />
 		<!-- Add source generator so AddSpaceSourceGenerated is produced in tests -->
 		
 		<PackageReference Include="coverlet.collector" Version="6.0.4" />
