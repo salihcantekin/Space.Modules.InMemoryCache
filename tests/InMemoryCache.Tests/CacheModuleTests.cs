@@ -27,7 +27,7 @@ public class CacheModuleTests
     private static ServiceProvider BuildProvider()
     {
         var services = new ServiceCollection();
-        services.AddSpace();
+        services.AddSpace(opt => opt.ServiceLifetime = ServiceLifetime.Singleton);
         services.AddSpaceInMemoryCache();
         return services.BuildServiceProvider();
     }

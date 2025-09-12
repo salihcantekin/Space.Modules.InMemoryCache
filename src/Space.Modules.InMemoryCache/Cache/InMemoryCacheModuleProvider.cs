@@ -25,7 +25,7 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
     {
         var duration = config?.TimeSpan ?? TimeSpan.Zero;
         var expiresAt = duration <= TimeSpan.Zero ? DateTimeOffset.MaxValue : DateTimeOffset.UtcNow.Add(duration);
-        
+
         handlers[key] = new CacheEntry { Value = response!, ExpiresAt = expiresAt };
 
         return default;

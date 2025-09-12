@@ -29,7 +29,7 @@ public class HandleTests
     private static ServiceProvider BuildProvider()
     {
         var services = new ServiceCollection();
-        services.AddSpace();
+        services.AddSpace(opt => opt.ServiceLifetime = ServiceLifetime.Singleton);
         return services.BuildServiceProvider();
     }
 
