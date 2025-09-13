@@ -66,10 +66,7 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
             if (globalProfiles != null)
             {
                 profileOpt = globalProfiles.FirstOrDefault(kv => string.Equals(kv.Key, requested, StringComparison.OrdinalIgnoreCase)).Value;
-                if (profileOpt == null)
-                {
-                    profileOpt = globalProfiles.FirstOrDefault(kv => string.Equals(kv.Key, ModuleConstants.DefaultProfileName, StringComparison.OrdinalIgnoreCase)).Value;
-                }
+                profileOpt ??= globalProfiles.FirstOrDefault(kv => string.Equals(kv.Key, ModuleConstants.DefaultProfileName, StringComparison.OrdinalIgnoreCase)).Value;
             }
 
             var globalProfileProps = ExtractProfileProperties(profileOpt);
@@ -161,7 +158,7 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
         if (string.IsNullOrEmpty(typeName)) return typeName;
         const string prefix = "global::";
 
-        return typeName.StartsWith(prefix, StringComparison.Ordinal) ? typeName.Substring(prefix.Length) : typeName;
+        return typeName.StartsWith(prefix, StringComparison.Ordinal) ? typeName[prefix.Length..] : typeName;
     }
 
     private IReadOnlyDictionary<string, CacheModuleOptions> GetGlobalProfiles()
@@ -170,12 +167,11 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
                ?? new Dictionary<string, CacheModuleOptions>();
     }
 
-    private static IReadOnlyDictionary<string, object> ExtractProfileProperties(CacheModuleOptions profileOpt)
+    private static Dictionary<string, object> ExtractProfileProperties(CacheModuleOptions profileOpt)
     {
-        if (profileOpt is null)
-            return new Dictionary<string, object>();
-
-        return CacheSettingsPropertiesMapper.ToDictionary(profileOpt);
+        return profileOpt is null
+            ? []
+            : CacheSettingsPropertiesMapper.ToDictionary(profileOpt);
     }
 
     private static string NormalizeProfileName(string name)
