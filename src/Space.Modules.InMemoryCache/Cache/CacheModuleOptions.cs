@@ -1,22 +1,11 @@
 ﻿using Space.Abstraction.Modules;
+using Space.Abstraction.Modules.Audit;
 using Space.Abstraction.Modules.Contracts;
 using System;
 
 namespace Space.Modules.InMemoryCache.Cache;
 
-public class CacheModuleOptions : BaseModuleOptions
+public class CacheModuleOptions : ProfileModuleOptions<CacheModuleOptions>, ICacheSettingsProperties
 {
-    //public CacheModuleOptions WithCacheModule<TProvider>(TProvider provider) where TProvider : IModuleProvider
-    //{
-    //    WithModuleProvider(provider);
-
-    //    return this;
-    //}
-
-    //public CacheModuleOptions WithCacheModule(Func<IServiceProvider, IModuleProvider> providerFunc)
-    //{
-    //    WithModuleProvider(providerFunc);
-
-    //    return this;
-    //}
+    public TimeSpan TimeSpan { get; set; }
 }

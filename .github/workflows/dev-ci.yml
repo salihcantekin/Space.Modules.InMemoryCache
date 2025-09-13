@@ -1,4 +1,4 @@
-name: Dev CI (Preview Publish)
+name: Dev CI (Build & Pack)
 
 on:
   push:
@@ -11,7 +11,7 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write
+  packages: read
 
 jobs:
   dev-ci:
@@ -30,9 +30,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
         with:
-          dotnet-version: |
-            8.x
-            9.x
+          dotnet-version: 8.x
           cache: true
           cache-dependency-path: |
             **/*.csproj
@@ -41,41 +39,19 @@ jobs:
       - name: Restore
         run: dotnet restore "$PROJECT"
 
-      - name: Resolve Preview Version
-        id: version
-        shell: bash
-        run: |
-          set -euo pipefail
-          LAST_STABLE_TAG=$(git tag --list 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || echo "v0.1.0")
-          BASE=${LAST_STABLE_TAG#v}
-          IFS='.' read -r MA MI PA <<<"$BASE"
-          NEXT_PATCH=$((PA+1))
-          VERSION="${MA}.${MI}.${NEXT_PATCH}-preview.${GITHUB_RUN_NUMBER}+sha.$(git rev-parse --short HEAD)"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "Resolved preview version: $VERSION (base $LAST_STABLE_TAG)" | tee -a $GITHUB_STEP_SUMMARY
-
       - name: Build (Release)
-        run: dotnet build "$PROJECT" -c Release -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
+        run: dotnet build "$PROJECT" -c Release -p:ContinuousIntegrationBuild=true --no-restore
 
       - name: Pack
         run: |
           mkdir -p artifacts
+          VERSION="0.0.0-dev.${GITHUB_RUN_NUMBER}+sha.$(git rev-parse --short HEAD)"
           echo "Packing $PROJECT -> ${VERSION}";
           dotnet pack "$PROJECT" -c Release -p:PackageVersion=${VERSION} -p:ContinuousIntegrationBuild=true -o artifacts --no-build
 
-      - name: Publish Preview Packages (NuGet)
-        if: success()
-        run: dotnet nuget push "./artifacts/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-
-      - name: Publish Outputs
-        run: |
-          mkdir -p drop
-          dotnet publish "$PROJECT" -c Release -o "drop/Space.Modules.InMemoryCache" -p:Version=${VERSION} -p:ContinuousIntegrationBuild=true --no-restore
-          cp artifacts/*.nupkg drop/
-
-      - name: Upload Drop Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dev-drop
-          path: drop
+          name: dev-artifacts
+          path: artifacts/*.nupkg
           retention-days: 7

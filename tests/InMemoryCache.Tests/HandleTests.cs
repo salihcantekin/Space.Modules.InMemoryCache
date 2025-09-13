@@ -14,8 +14,8 @@ public class HandleTests
 
     public class TestHandler
     {
-        public Func<HandlerContext<int>, ValueTask<int>>? HandleIntFunc;
-        public Func<HandlerContext<HandleWithNameRequest>, ValueTask<HandleWithNameResponse>>? HandleWithNameFunc;
+        public Func<HandlerContext<int>, ValueTask<int>> HandleIntFunc;
+        public Func<HandlerContext<HandleWithNameRequest>, ValueTask<HandleWithNameResponse>> HandleWithNameFunc;
 
         [Handle]
         public virtual ValueTask<int> Handle_int_int(HandlerContext<int> ctx)
@@ -29,7 +29,7 @@ public class HandleTests
     private static ServiceProvider BuildProvider()
     {
         var services = new ServiceCollection();
-        services.AddSpace();
+        services.AddSpace(opt => opt.ServiceLifetime = ServiceLifetime.Singleton);
         return services.BuildServiceProvider();
     }
 

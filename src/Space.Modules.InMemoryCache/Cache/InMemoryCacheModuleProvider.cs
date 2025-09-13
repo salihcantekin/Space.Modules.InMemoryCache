@@ -6,6 +6,15 @@ namespace Space.Modules.InMemoryCache.Cache;
 
 public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
 {
+    private readonly TimeProvider timeProvider;
+
+    public InMemoryCacheModuleProvider() : this(TimeProvider.System) { }
+
+    public InMemoryCacheModuleProvider(TimeProvider timeProvider)
+    {
+        this.timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
     // introduce cache entry model to manage expiration
     private sealed class CacheEntry
     {
@@ -24,8 +33,9 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
     public ValueTask Store<TResponse>(string key, TResponse response, CacheModuleConfig config)
     {
         var duration = config?.TimeSpan ?? TimeSpan.Zero;
-        var expiresAt = duration <= TimeSpan.Zero ? DateTimeOffset.MaxValue : DateTimeOffset.UtcNow.Add(duration);
-        
+        var now = timeProvider.GetUtcNow();
+        var expiresAt = duration <= TimeSpan.Zero ? DateTimeOffset.MaxValue : now.Add(duration);
+
         handlers[key] = new CacheEntry { Value = response!, ExpiresAt = expiresAt };
 
         return default;
@@ -38,7 +48,7 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
         if (!handlers.TryGetValue(key, out var entry))
             return false;
 
-        if (entry.ExpiresAt <= DateTimeOffset.UtcNow)
+        if (entry.ExpiresAt <= timeProvider.GetUtcNow())
         {
             // invalidate expired
             handlers.TryRemove(key, out _);
