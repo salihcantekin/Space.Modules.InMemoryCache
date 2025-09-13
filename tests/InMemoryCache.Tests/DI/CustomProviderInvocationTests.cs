@@ -127,7 +127,7 @@ public class CustomProviderInvocationTests
 
         Key.ShouldContain("pX");
         tryCall.Key.ShouldContain("pX");
-        
+
         if (storeCall != default)
         {
             storeCall.Key.ShouldContain("pX");
