@@ -169,8 +169,8 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
 
     private static Dictionary<string, object> ExtractProfileProperties(CacheModuleOptions profileOpt)
     {
-        return profileOpt is null 
-            ? [] 
+        return profileOpt is null
+            ? []
             : CacheSettingsPropertiesMapper.ToDictionary(profileOpt);
     }
 
