@@ -12,16 +12,47 @@ public static class CacheModuleDependencyInjectionExtensions
 {
     public static IServiceCollection AddSpaceInMemoryCache(this IServiceCollection services, Action<CacheModuleOptions> optionAction = null)
     {
-        CacheModuleOptions opt = new();
-        optionAction?.Invoke(opt);
-        
-        services.AddSingleton<IReadOnlyDictionary<string, CacheModuleOptions>>(opt.Profiles);
-        services.AddSingleton<IModuleGlobalOptionsAccessor<CacheModuleOptions>>(sp => new ModuleGlobalOptionsAccessor<CacheModuleOptions>(opt.Profiles));
-        services.AddSingleton<TimeProvider>(TimeProvider.System);
+        AddDefaultsInternal(services, optionAction);
         services.AddSingleton<ICacheModuleProvider, InMemoryCacheModuleProvider>();
 
         return services;
     }
+
+    public static IServiceCollection AddSpaceInMemoryCache<TCustomCacheProvider>(this IServiceCollection services, Action<CacheModuleOptions> optionAction = null)
+        where TCustomCacheProvider : class, ICacheModuleProvider
+    {
+        AddDefaultsInternal(services, optionAction);
+
+        services.AddSingleton<ICacheModuleProvider, TCustomCacheProvider>();
+
+        return services;
+    }
+
+    private static void AddDefaultsInternal(IServiceCollection services, Action<CacheModuleOptions> optionAction)
+    {
+        CacheModuleOptions opt = new();
+        optionAction?.Invoke(opt);
+
+        services.AddSingleton<IReadOnlyDictionary<string, CacheModuleOptions>>(opt.Profiles);
+        services.AddSingleton<IModuleGlobalOptionsAccessor<CacheModuleOptions>>(sp => new ModuleGlobalOptionsAccessor<CacheModuleOptions>(opt.Profiles));
+        services.AddSingleton<TimeProvider>(TimeProvider.System);
+
+        foreach (var profile in opt.Profiles.Values)
+        {
+            ValidateOptions(profile);
+        }
+    }
+
+    private static void ValidateOptions(CacheModuleOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        if (options.TimeSpan < TimeSpan.Zero)
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+            throw new ArgumentOutOfRangeException(nameof(options.TimeSpan), "Duration must be non-negative.");
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+    }
+
 }
 
 
