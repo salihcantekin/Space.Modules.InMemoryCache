@@ -11,7 +11,7 @@ namespace InMemoryCache.Tests;
 
 public class PipelineTests
 {
-    public record Req(string Text): IRequest<Res>;
+    public record Req(string Text) : IRequest<Res>;
     public record Res(string Text);
 
     public class PipelineHandler
