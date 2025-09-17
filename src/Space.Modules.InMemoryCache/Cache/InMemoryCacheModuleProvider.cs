@@ -8,7 +8,6 @@ public sealed class InMemoryCacheModuleProvider(TimeProvider timeProvider) : ICa
 {
     private readonly TimeProvider timeProvider = timeProvider ?? TimeProvider.System;
     private readonly MemoryCache cache = new(new MemoryCacheOptions());
-    
 
     public InMemoryCacheModuleProvider() : this(TimeProvider.System) { }
 
