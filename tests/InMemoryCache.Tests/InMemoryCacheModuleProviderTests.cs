@@ -7,12 +7,10 @@ namespace InMemoryCache.Tests;
 
 public class InMemoryCacheModuleProviderTests
 {
-    private sealed class FakeClock : TimeProvider
+    private sealed class FakeClock(DateTimeOffset start) : TimeProvider
     {
-        private DateTimeOffset now;
-        public FakeClock(DateTimeOffset start) => now = start;
-        public override DateTimeOffset GetUtcNow() => now;
-        public void Advance(TimeSpan by) => now = now.Add(by);
+        public override DateTimeOffset GetUtcNow() => start;
+        public void Advance(TimeSpan by) => start = start.Add(by);
     }
 
     private static CacheModuleConfig Cfg(TimeSpan ttl) => new() { TimeSpan = ttl };
@@ -23,6 +21,20 @@ public class InMemoryCacheModuleProviderTests
         var p = new InMemoryCacheModuleProvider(TimeProvider.System);
         Assert.Equal("5", p.GetKey(5));
         Assert.Equal("abc", p.GetKey("abc"));
+    }
+
+    private sealed class CustomReq
+    {
+        public string X { get; set; } = string.Empty;
+        public override string ToString() => $"custom:{X.ToLowerInvariant()}";
+    }
+
+    [Fact]
+    public void GetKey_Uses_Request_ToString_Override()
+    {
+        var p = new InMemoryCacheModuleProvider(TimeProvider.System);
+        var key = p.GetKey(new CustomReq { X = "ABC" });
+        Assert.Equal("custom:abc", key);
     }
 
     [Fact]
@@ -95,5 +107,43 @@ public class InMemoryCacheModuleProviderTests
         var ok = p.TryGet<string>(key, out var value, Cfg(TimeSpan.FromSeconds(1)));
         Assert.True(ok);
         Assert.Equal("b", value);
+    }
+
+    [Fact]
+    public async Task Remove_Removes_Existing_Key_And_ReturnsTrue()
+    {
+        var clock = new FakeClock(DateTimeOffset.UnixEpoch);
+        var p = new InMemoryCacheModuleProvider(clock);
+        var key = "rm1";
+        await p.Store(key, "val", Cfg(TimeSpan.FromSeconds(5)));
+
+        var existed = p.Remove(key);
+        Assert.True(existed);
+        var ok = p.TryGet<string>(key, out _, Cfg(TimeSpan.FromSeconds(5)));
+        Assert.False(ok);
+    }
+
+    [Fact]
+    public void Remove_ReturnsFalse_When_Key_Not_Found()
+    {
+        var p = new InMemoryCacheModuleProvider(TimeProvider.System);
+        var existed = p.Remove("missing-key");
+        Assert.False(existed);
+    }
+
+    [Fact]
+    public async Task Clear_Removes_All_Entries()
+    {
+        var clock = new FakeClock(DateTimeOffset.UnixEpoch);
+        var p = new InMemoryCacheModuleProvider(clock);
+        await p.Store("a", 1, Cfg(TimeSpan.FromSeconds(10)));
+        await p.Store("b", 2, Cfg(TimeSpan.FromSeconds(10)));
+
+        p.Clear();
+
+        var okA = p.TryGet<int>("a", out var _, Cfg(TimeSpan.FromSeconds(10)));
+        var okB = p.TryGet<int>("b", out var _, Cfg(TimeSpan.FromSeconds(10)));
+        Assert.False(okA);
+        Assert.False(okB);
     }
 }

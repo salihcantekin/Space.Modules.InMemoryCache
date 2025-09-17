@@ -1,19 +1,16 @@
 using System;
-using System.Collections.Concurrent;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Space.Modules.InMemoryCache.Cache;
 
-public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
+public sealed class InMemoryCacheModuleProvider(TimeProvider timeProvider) : ICacheModuleProvider
 {
-    private readonly TimeProvider timeProvider;
+    private readonly TimeProvider timeProvider = timeProvider ?? TimeProvider.System;
+    private readonly MemoryCache cache = new(new MemoryCacheOptions());
+    
 
     public InMemoryCacheModuleProvider() : this(TimeProvider.System) { }
-
-    public InMemoryCacheModuleProvider(TimeProvider timeProvider)
-    {
-        this.timeProvider = timeProvider ?? TimeProvider.System;
-    }
 
     // introduce cache entry model to manage expiration
     private sealed class CacheEntry
@@ -23,7 +20,6 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
     }
 
     // change dictionary to CacheEntry
-    private readonly ConcurrentDictionary<string, CacheEntry> handlers = [];
 
     public string GetKey<TRequest>(TRequest request)
     {
@@ -36,7 +32,20 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
         var now = timeProvider.GetUtcNow();
         var expiresAt = duration <= TimeSpan.Zero ? DateTimeOffset.MaxValue : now.Add(duration);
 
-        handlers[key] = new CacheEntry { Value = response!, ExpiresAt = expiresAt };
+        var entry = new CacheEntry { Value = response!, ExpiresAt = expiresAt };
+
+        if (duration > TimeSpan.Zero)
+        {
+            cache.Set(key, entry, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = duration
+            });
+        }
+        else
+        {
+            // No explicit expiration, keep indefinitely in memory cache
+            cache.Set(key, entry);
+        }
 
         return default;
     }
@@ -45,13 +54,13 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
     {
         response = default;
 
-        if (!handlers.TryGetValue(key, out var entry))
+        if (!cache.TryGetValue(key, out CacheEntry entry))
             return false;
 
         if (entry.ExpiresAt <= timeProvider.GetUtcNow())
         {
             // invalidate expired
-            handlers.TryRemove(key, out _);
+            cache.Remove(key);
             return false;
         }
 
@@ -59,5 +68,23 @@ public sealed class InMemoryCacheModuleProvider : ICacheModuleProvider
 
         return true;
 
+    }
+
+    // Manual eviction APIs
+    public bool Remove(string key)
+    {
+        // MemoryCache.Remove does not indicate if a key existed; emulate by TryGet first
+        var existed = cache.TryGetValue(key, out _);
+        cache.Remove(key);
+        return existed;
+    }
+
+    public void Clear()
+    {
+        // Compact 1.0 clears the entire cache
+        if (cache is MemoryCache mc)
+        {
+            mc.Compact(1.0);
+        }
     }
 }
