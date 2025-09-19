@@ -2,13 +2,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Space.Abstraction;
 using Space.Abstraction.Attributes;
 using Space.Abstraction.Context;
+using Space.Abstraction.Contracts;
 using Space.DependencyInjection;
 
 namespace InMemoryCache.Tests;
 
 public class PipelineTests
 {
-    public record Req(string Text);
+    public record Req(string Text): IRequest<Res>;
     public record Res(string Text);
 
     public class PipelineHandler

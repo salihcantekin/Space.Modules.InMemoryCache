@@ -68,6 +68,19 @@ services.AddSpace();
 ## Configuration Mapping
 `Duration` (int seconds) from the attribute populates `CacheModuleConfig.TimeSpan`. If omitted or < 0 it is treated as 0.
 
+## Breaking change
+- `CacheModuleOptions` no longer exposes `TimeSpan`. Configure TTL only via profiles using `WithDefaultProfile`/`WithProfile` on `CacheModuleOptions` with `CacheProfileOptions`.
+- Any existing usage like `services.AddSpaceInMemoryCache(opt => opt.TimeSpan = ...)` must be replaced with:
+  ```csharp
+  services.AddSpaceInMemoryCache(opt =>
+  {
+      opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromMinutes(1));
+      // or named profiles
+      opt.WithProfile("fast", p => p.TimeSpan = TimeSpan.FromSeconds(5));
+  });
+  ```
+- Provider hooks inherited from `BaseModuleOptions` (e.g., `WithModuleProvider`, provider action) are not consumed by this module. Provider resolution is: attribute `Provider` -> DI-registered `ICacheModuleProvider` -> built-in `InMemoryCacheModuleProvider`.
+
 ## Notes
 - A module attribute augments its `[Handle]` method; it does not introduce its own method.
 - Only handlers explicitly annotated with `[CacheModule]` should be cached (framework ensures attribute scoping per handler signature).
