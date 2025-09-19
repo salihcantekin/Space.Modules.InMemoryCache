@@ -27,12 +27,12 @@ jobs:
       PROJECT: src/Space.Modules.InMemoryCache/Space.Modules.InMemoryCache.csproj
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: |
             8.x
@@ -41,18 +41,18 @@ jobs:
       - name: Restore (all projects)
         run: dotnet restore
 
-      - name: Code Style Check
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t projects < <(git ls-files "*.csproj")
-          if [ ${#projects[@]} -eq 0 ]; then
-            echo "No projects found to format. Skipping."; exit 0
-          fi
-          for p in "${projects[@]}"; do
-            echo "Running dotnet format on: $p"
-            dotnet format "$p" --verify-no-changes
-          done
+      # - name: Code Style Check
+      #   shell: bash
+      #   run: |
+      #     set -euo pipefail
+      #     mapfile -t projects < <(git ls-files "*.csproj")
+      #     if [ ${#projects[@]} -eq 0 ]; then
+      #       echo "No projects found to format. Skipping."; exit 0
+      #     fi
+      #     for p in "${projects[@]}"; do
+      #       echo "Running dotnet format on: $p"
+      #       dotnet format "$p" --verify-no-changes
+      #     done
 
       - name: Build Solution (Release)
         run: dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true

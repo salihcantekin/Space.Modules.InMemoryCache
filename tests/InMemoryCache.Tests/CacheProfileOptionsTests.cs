@@ -11,12 +11,10 @@ namespace InMemoryCache.Tests;
 
 public class CacheProfileOptionsTests
 {
-    private sealed class FakeClock : TimeProvider
+    private sealed class FakeClock(DateTimeOffset start) : TimeProvider
     {
-        private DateTimeOffset now;
-        public FakeClock(DateTimeOffset start) => now = start;
-        public override DateTimeOffset GetUtcNow() => now;
-        public void Advance(TimeSpan by) => now = now.Add(by);
+        public override DateTimeOffset GetUtcNow() => start;
+        public void Advance(TimeSpan by) => start = start.Add(by);
     }
 
     public record Req(string Key) : IRequest<Res>;
@@ -24,7 +22,7 @@ public class CacheProfileOptionsTests
 
     public class Handler
     {
-        public Func<HandlerContext<Req>, ValueTask<Res>>? HandleFunc;
+        public Func<HandlerContext<Req>, ValueTask<Res>> HandleFunc;
 
         [Handle(Name = nameof(DefaultProfile))]
         [CacheModule] // no properties set -> should use global Default profile
