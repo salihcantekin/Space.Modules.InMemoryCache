@@ -64,4 +64,17 @@ public sealed class TestCustomCacheProvider(TimeProvider timeProvider) : ICacheM
     {
         lock (gate) Calls.Clear();
     }
+
+    // Manual eviction support for tests
+    public bool Remove(string key)
+    {
+        lock (gate) Calls.Add(("Remove", key, default));
+        return store.TryRemove(key, out _);
+    }
+
+    public void Clear()
+    {
+        lock (gate) Calls.Add(("Clear", string.Empty, default));
+        store.Clear();
+    }
 }

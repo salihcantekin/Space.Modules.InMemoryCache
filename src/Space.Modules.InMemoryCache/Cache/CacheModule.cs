@@ -62,7 +62,7 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
             var globalProfiles = GetGlobalProfiles();
             var requested = NormalizeProfileName(moduleKey.ProfileName);
 
-            CacheModuleOptions profileOpt = null;
+            CacheProfileOptions profileOpt = null;
             if (globalProfiles != null)
             {
                 profileOpt = globalProfiles.FirstOrDefault(kv => string.Equals(kv.Key, requested, StringComparison.OrdinalIgnoreCase)).Value;
@@ -161,13 +161,13 @@ public class CacheModule(IServiceProvider serviceProvider) : SpaceModule(service
         return typeName.StartsWith(prefix, StringComparison.Ordinal) ? typeName[prefix.Length..] : typeName;
     }
 
-    private IReadOnlyDictionary<string, CacheModuleOptions> GetGlobalProfiles()
+    private IReadOnlyDictionary<string, CacheProfileOptions> GetGlobalProfiles()
     {
-        return ServiceProvider.GetService<IModuleGlobalOptionsAccessor<CacheModuleOptions>>()?.Profiles
-               ?? new Dictionary<string, CacheModuleOptions>();
+        return ServiceProvider.GetService<IModuleGlobalOptionsAccessor<CacheProfileOptions>>()?.Profiles
+               ?? new Dictionary<string, CacheProfileOptions>();
     }
 
-    private static Dictionary<string, object> ExtractProfileProperties(CacheModuleOptions profileOpt)
+    private static Dictionary<string, object> ExtractProfileProperties(CacheProfileOptions profileOpt)
     {
         return profileOpt is null
             ? []

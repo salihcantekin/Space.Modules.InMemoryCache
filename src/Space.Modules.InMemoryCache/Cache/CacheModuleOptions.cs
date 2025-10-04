@@ -5,7 +5,7 @@ using System;
 
 namespace Space.Modules.InMemoryCache.Cache;
 
-public class CacheModuleOptions : ProfileModuleOptions<CacheModuleOptions>, ICacheSettingsProperties
+// Root options container for profile-based configuration. No per-profile properties here.
+public class CacheModuleOptions : ProfileOnlyModuleOptions<CacheProfileOptions>
 {
-    public TimeSpan TimeSpan { get; set; }
 }

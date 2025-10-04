@@ -52,7 +52,22 @@ services.AddSpaceInMemoryCache(); // registers InMemoryCacheModuleProvider
 // Registers your own provider instead of the default
 services.AddSpace();
 services.AddSpaceInMemoryCache<MyCustomCacheProvider>();
+
 ```
+
+- Generic overload + profile options
+```csharp
+services.AddSpace();
+services.AddSpaceInMemoryCache<MyCustomCacheProvider>(opt =>
+{
+    // default profile used when attribute has no properties
+    opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromMinutes(1));
+
+    // named profile can be selected via [CacheModule(Profile = "fast")]
+    opt.WithProfile("fast", p => p.TimeSpan = TimeSpan.FromSeconds(5));
+});
+```
+Order does not matter relative to `AddSpace()`.
 
 - Generic overload + profile options
 ```csharp
@@ -166,6 +181,19 @@ services.AddSpace();
 
 ## Configuration Mapping
 `Duration` (int seconds) from the attribute populates `CacheModuleConfig.TimeSpan`. If omitted or < 0 it is treated as 0 (no expiration). Global and named profile values can also provide `TimeSpan`.
+
+## Breaking change
+- `CacheModuleOptions` no longer exposes `TimeSpan`. Configure TTL only via profiles using `WithDefaultProfile`/`WithProfile` on `CacheModuleOptions` with `CacheProfileOptions`.
+- Any existing usage like `services.AddSpaceInMemoryCache(opt => opt.TimeSpan = ...)` must be replaced with:
+  ```csharp
+  services.AddSpaceInMemoryCache(opt =>
+  {
+      opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromMinutes(1));
+      // or named profiles
+      opt.WithProfile("fast", p => p.TimeSpan = TimeSpan.FromSeconds(5));
+  });
+  ```
+- Provider hooks inherited from `BaseModuleOptions` (e.g., `WithModuleProvider`, provider action) are not consumed by this module. Provider resolution is: attribute `Provider` -> DI-registered `ICacheModuleProvider` -> built-in `InMemoryCacheModuleProvider`.
 
 ## Notes
 - A module attribute augments its `[Handle]` method; it does not introduce its own method.

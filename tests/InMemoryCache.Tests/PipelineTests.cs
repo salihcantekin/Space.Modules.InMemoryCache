@@ -1,14 +1,17 @@
+using InMemoryCache.Tests.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Space.Abstraction;
 using Space.Abstraction.Attributes;
 using Space.Abstraction.Context;
+using Space.Abstraction.Contracts;
 using Space.DependencyInjection;
+using Space.Modules.InMemoryCache;
 
 namespace InMemoryCache.Tests;
 
 public class PipelineTests
 {
-    public record Req(string Text);
+    public record Req(string Text) : IRequest<Res>;
     public record Res(string Text);
 
     public class PipelineHandler
@@ -34,6 +37,7 @@ public class PipelineTests
     {
         var services = new ServiceCollection();
         services.AddSpace(opt => opt.ServiceLifetime = ServiceLifetime.Singleton);
+        services.AddSpaceInMemoryCache<TestCustomCacheProvider>();
         return services.BuildServiceProvider();
     }
 
