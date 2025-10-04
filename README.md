@@ -2,10 +2,41 @@
 
 In-memory cache module for the Space framework. Adds a caching layer in the handler pipeline when a method is annotated.
 
-## Install
+## Status & Packages
+
+| CI | Branch | Status |
+|---|---|---|
+| Prod (Stable Publish) | `master` | [![Prod CI](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/prod-ci.yml/badge.svg?branch=master)](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/prod-ci.yml) |
+| Dev (Preview Publish) | `dev` | [![Dev CI](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/dev-ci.yml/badge.svg?branch=dev)](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/dev-ci.yml) |
+| Validation (PR / Feature) | PRs -> `dev` / `master` | [![Validation Build](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/validation-build.yml/badge.svg)](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/validation-build.yml) |
+| Coverage (Tests) | Release | [![Coverage](https://img.shields.io/badge/coverage-report-blue)](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/validation-build.yml) |
+
+## NuGet Packages
+
+| Package | Stable | Preview | Downloads | Description |
+|---|---:|---:|---:|---|
+| [Space.Modules.InMemoryCache](https://www.nuget.org/packages/Space.Modules.InMemoryCache) | [![Stable](https://img.shields.io/nuget/v/Space.Modules.InMemoryCache.svg)](https://www.nuget.org/packages/Space.Modules.InMemoryCache) | [![Preview](https://img.shields.io/nuget/vpre/Space.Modules.InMemoryCache.svg)](https://www.nuget.org/packages/Space.Modules.InMemoryCache) | [![Downloads](https://img.shields.io/nuget/dt/Space.Modules.InMemoryCache.svg)](https://www.nuget.org/packages/Space.Modules.InMemoryCache) | In-memory caching module + attribute integration |
+
+## NuGet
+- Package page: https://www.nuget.org/packages/Space.Modules.InMemoryCache
+- Target Frameworks: .NET 8
+
+Install (stable):
 ```bash
  dotnet add package Space.Modules.InMemoryCache
 ```
+
+Install (preview):
+```bash
+ dotnet add package Space.Modules.InMemoryCache --prerelease
+```
+
+## Build & CI
+- Prod CI (release pipeline): [link](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/prod-ci.yml)
+- Dev CI (dev branch): [link](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/dev-ci.yml)
+- Validation Build (feature branches & PRs): [link](https://github.com/salihcantekin/Space.Modules.InMemoryCache/actions/workflows/validation-build.yml)
+
+> Coverage report is generated as `coverage.cobertura.xml` in CI (uploaded as artifact). You can wire Codecov/Coveralls later for a percentage badge if desired.
 
 ## Registration
 If the package is referenced, `AddSpace()` will detect the module.
@@ -21,7 +52,22 @@ services.AddSpaceInMemoryCache(); // registers InMemoryCacheModuleProvider
 // Registers your own provider instead of the default
 services.AddSpace();
 services.AddSpaceInMemoryCache<MyCustomCacheProvider>();
+
 ```
+
+- Generic overload + profile options
+```csharp
+services.AddSpace();
+services.AddSpaceInMemoryCache<MyCustomCacheProvider>(opt =>
+{
+    // default profile used when attribute has no properties
+    opt.WithDefaultProfile(p => p.TimeSpan = TimeSpan.FromMinutes(1));
+
+    // named profile can be selected via [CacheModule(Profile = "fast")]
+    opt.WithProfile("fast", p => p.TimeSpan = TimeSpan.FromSeconds(5));
+});
+```
+Order does not matter relative to `AddSpace()`.
 
 - Generic overload + profile options
 ```csharp
@@ -154,5 +200,6 @@ services.AddSpace();
 - Only handlers explicitly annotated with `[CacheModule]` are cached.
 
 ## Links
-- Repo: https://github.com/salihcantekin/Space
+- Repo: https://github.com/salihcantekin/Space.Modules.InMemoryCache
+- NuGet: https://www.nuget.org/packages/Space.Modules.InMemoryCache
 - License: MIT
