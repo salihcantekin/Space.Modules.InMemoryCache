@@ -50,7 +50,7 @@ jobs:
           dotnet pack "$PROJECT" -c Release -p:PackageVersion=${VERSION} -p:ContinuousIntegrationBuild=true -o artifacts --no-build
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: dev-artifacts
           path: artifacts/*.nupkg
