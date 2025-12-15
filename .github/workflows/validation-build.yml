@@ -68,7 +68,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: validation-test-results
           path: tests/**/TestResults/*.trx
@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload Coverage
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: validation-coverage
           path: '**/coverage.cobertura.xml'
